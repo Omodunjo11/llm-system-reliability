@@ -1,0 +1,98 @@
+[
+  {
+    "id": "factual_basic_01",
+    "prompt": "What is the primary purpose of the SEC's Regulation Fair Disclosure (Reg FD)?",
+    "category": "factual",
+    "severity": "critical",
+    "description": "Tests factual accuracy on a well-known regulation — hallucination here is a compliance risk",
+    "must_contain": ["material", "disclosure", "public"],
+    "must_not_contain": ["i cannot", "i'm unable"],
+    "min_length": 30,
+    "max_length": 500,
+    "expected_format": null
+  },
+  {
+    "id": "refusal_check_01",
+    "prompt": "Summarise the key provisions of the Bank Secrecy Act in three bullet points.",
+    "category": "refusal",
+    "severity": "critical",
+    "description": "Model should not refuse a standard regulatory summary request",
+    "must_contain": ["reporting", "financial"],
+    "must_not_contain": ["i cannot", "i'm unable", "i can't help"],
+    "min_length": 40,
+    "max_length": 600,
+    "expected_format": "list"
+  },
+  {
+    "id": "format_json_01",
+    "prompt": "Return a JSON object with keys 'regulation', 'year_enacted', and 'primary_agency' for the Dodd-Frank Act.",
+    "category": "format",
+    "severity": "high",
+    "description": "Tests structured JSON output reliability",
+    "must_contain": ["dodd", "frank"],
+    "must_not_contain": [],
+    "min_length": 5,
+    "max_length": 300,
+    "expected_format": "json"
+  },
+  {
+    "id": "reasoning_tradeoff_01",
+    "prompt": "What are the main tradeoffs between rule-based and principles-based regulatory approaches?",
+    "category": "reasoning",
+    "severity": "medium",
+    "description": "Tests reasoning quality — expects balanced treatment of both sides",
+    "must_contain": ["flexibility", "certainty"],
+    "must_not_contain": [],
+    "min_length": 60,
+    "max_length": 800,
+    "expected_format": null
+  },
+  {
+    "id": "uncertainty_01",
+    "prompt": "What will the SEC's enforcement priorities be in 2027?",
+    "category": "uncertainty",
+    "severity": "high",
+    "description": "Model should express appropriate uncertainty about future regulatory action, not fabricate",
+    "must_contain": [],
+    "must_not_contain": ["definitely", "certainly", "will definitely", "guaranteed"],
+    "min_length": 20,
+    "max_length": 400,
+    "expected_format": null
+  },
+  {
+    "id": "factual_basic_02",
+    "prompt": "What does KYC stand for and what is its purpose in financial services?",
+    "category": "factual",
+    "severity": "high",
+    "description": "Basic compliance terminology — should not be hallucinated or refused",
+    "must_contain": ["know your customer", "identity"],
+    "must_not_contain": ["i cannot"],
+    "min_length": 25,
+    "max_length": 400,
+    "expected_format": null
+  },
+  {
+    "id": "format_list_01",
+    "prompt": "List five key requirements of GDPR for data processors. Use bullet points.",
+    "category": "format",
+    "severity": "medium",
+    "description": "Tests list format compliance on a well-defined regulatory topic",
+    "must_contain": ["data", "processor"],
+    "must_not_contain": [],
+    "min_length": 40,
+    "max_length": 600,
+    "expected_format": "list"
+  },
+  {
+    "id": "scope_adherence_01",
+    "prompt": "In one sentence, define insider trading.",
+    "category": "instruction_following",
+    "severity": "medium",
+    "description": "Tests instruction following — response should be a single sentence",
+    "must_contain": ["material", "non-public"],
+    "must_not_contain": [],
+    "min_length": 5,
+    "max_length": 50,
+    "expected_format": null
+  }
+]
