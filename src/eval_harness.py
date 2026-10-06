@@ -256,6 +256,7 @@ def run_rag_harness(
     queries: Optional[List[RagEvalQuery]] = None,
     docs_path: str = "data/sample_docs.json",
     model_version: str = "rag-pipeline-v1",
+    queries_path: Optional[str] = None,
 ) -> HarnessReport:
     """
     Runs the local grounded RAG pipeline against curated reliability cases.
@@ -265,7 +266,12 @@ def run_rag_harness(
     """
     from src.pipeline import ReliabilityPipeline
 
-    specs = queries if queries is not None else load_rag_eval_queries()
+    if queries is not None:
+        specs = queries
+    elif queries_path is not None:
+        specs = load_rag_eval_queries(queries_path)
+    else:
+        specs = load_rag_eval_queries()
     pipeline = ReliabilityPipeline.from_docs(path=docs_path)
 
     import hashlib
@@ -290,10 +296,16 @@ def run_rag_harness(
             if pipeline_result.faithfulness is not None
             else None
         )
+        hard = getattr(pipeline_result.confidence, "hard_abstain", False)
         print(
-            f"       abstain={pipeline_result.abstained} "
-            f"confidence={conf:.3f} faithfulness={faith}"
+            f"       abstain={pipeline_result.abstained} hard={hard} "
+            f"confidence={conf:.3f} idf_cov={pipeline_result.confidence.idf_coverage:.3f} "
+            f"faithfulness={faith}"
         )
+        if pipeline_result.confidence.missing_rare_terms:
+            print(
+                f"       missing_rare={pipeline_result.confidence.missing_rare_terms}"
+            )
         if result.failures:
             for f in result.failures:
                 print(f"       └─ {f}")
@@ -320,12 +332,52 @@ def run_rag_harness(
     )
 
 
-def main() -> int:
-    print("\n🔍 Running RAG reliability harness (local, no API)...\n")
-    report = run_rag_harness()
-    save_report(report, output_path="outputs/rag_harness_report.json")
-    print_summary(report)
-    return 0 if report.gate_passed else 1
+def run_adversarial_harness(
+    docs_path: str = "data/sample_docs.json",
+) -> HarnessReport:
+    """Regression suite of intentional break attempts."""
+    return run_rag_harness(
+        queries_path="data/adversarial_queries.json",
+        docs_path=docs_path,
+        model_version="rag-pipeline-adversarial-v1",
+    )
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    import argparse
+
+    parser = argparse.ArgumentParser(description="LLM reliability eval harness")
+    parser.add_argument(
+        "--adversarial",
+        action="store_true",
+        help="Run adversarial break-case suite",
+    )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Run golden RAG suite then adversarial suite",
+    )
+    args = parser.parse_args(argv)
+
+    exit_code = 0
+
+    if args.all or not args.adversarial:
+        print("\n🔍 Running RAG reliability harness (local, no API)...\n")
+        report = run_rag_harness()
+        save_report(report, output_path="outputs/rag_harness_report.json")
+        print_summary(report)
+        if not report.gate_passed:
+            exit_code = 1
+
+    if args.all or args.adversarial:
+        print("\n💥 Running adversarial break harness...\n")
+        adv = run_adversarial_harness()
+        save_report(adv, output_path="outputs/adversarial_harness_report.json")
+        print_summary(adv)
+        if not adv.gate_passed:
+            exit_code = 1
+
+    return exit_code
 
 
 if __name__ == "__main__":

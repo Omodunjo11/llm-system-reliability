@@ -8,7 +8,7 @@ End-to-end grounded RAG reliability pipeline:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict, List, Optional, Sequence
 
 from src.abstention import (
@@ -19,7 +19,7 @@ from src.abstention import (
 )
 from src.evaluation import FaithfulnessResult, evaluate_faithfulness
 from src.generation import GroundedAnswer, generate_grounded
-from src.retrieval import BM25Index, ScoredDocument, build_index, load_docs
+from src.retrieval import BM25Index, ScoredDocument, load_docs
 
 
 @dataclass
@@ -65,12 +65,17 @@ class ReliabilityPipeline:
         return cls(index=BM25Index(documents), **kwargs)
 
     def run(self, query: str) -> PipelineResult:
+        query = (query or "").strip()
         retrieved = self.index.search(
             query,
             top_k=self.top_k,
             min_score=self.min_retrieval_score,
         )
-        confidence = estimate_confidence(retrieved, query=query)
+        confidence = estimate_confidence(
+            retrieved,
+            query=query,
+            idf_fn=self.index.idf,
+        )
         abstain = should_abstain(confidence, threshold=self.abstain_threshold)
 
         if abstain:

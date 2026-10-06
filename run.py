@@ -6,6 +6,7 @@ CLI entry point for the LLM reliability toolkit.
 Usage:
   python run.py rag [query]      Run grounded RAG pipeline (demo / interactive)
   python run.py eval             Run local RAG reliability harness (no API)
+  python run.py audit            Run adversarial break harness (no API)
   python run.py harness          Run golden query regression harness (LLM / mock)
   python run.py drift            Run drift check against stored baseline
   python run.py snapshot         Save current responses as new baseline
@@ -28,6 +29,7 @@ from src.drift_monitor import (
 from src.eval_harness import (
     load_golden_queries,
     print_summary as print_harness_summary,
+    run_adversarial_harness,
     run_harness,
     run_rag_harness,
     save_report as save_harness_report,
@@ -92,11 +94,14 @@ def cmd_rag(query: str | None = None):
 
     print("\n=== CONFIDENCE ===")
     c = result.confidence
-    print(f"  score={c.score:.3f}")
+    print(f"  score={c.score:.3f} hard_abstain={c.hard_abstain}")
     print(
         f"  strength={c.retrieval_strength:.3f} margin={c.score_margin:.3f} "
-        f"coverage={c.term_coverage:.3f} density={c.evidence_density:.3f}"
+        f"coverage={c.term_coverage:.3f} idf_coverage={c.idf_coverage:.3f} "
+        f"density={c.evidence_density:.3f}"
     )
+    if c.missing_rare_terms:
+        print(f"  missing_rare={c.missing_rare_terms}")
     print(f"  reasons={c.reasons}")
 
     if result.abstained:
@@ -119,6 +124,14 @@ def cmd_eval():
     print("\n🔍 Running local RAG reliability harness...\n")
     report = run_rag_harness()
     save_harness_report(report, output_path="outputs/rag_harness_report.json")
+    print_harness_summary(report)
+    return 0 if report.gate_passed else 1
+
+
+def cmd_audit():
+    print("\n💥 Running adversarial break harness...\n")
+    report = run_adversarial_harness()
+    save_harness_report(report, output_path="outputs/adversarial_harness_report.json")
     print_harness_summary(report)
     return 0 if report.gate_passed else 1
 
@@ -192,6 +205,7 @@ def cmd_report():
     print("\n📋 Latest reports:\n")
     for report_path in [
         "outputs/rag_harness_report.json",
+        "outputs/adversarial_harness_report.json",
         "outputs/harness_report.json",
         "outputs/drift_report.json",
     ]:
@@ -215,7 +229,7 @@ def cmd_report():
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print(
-            "Usage: python run.py [rag | eval | harness | snapshot | drift | report] "
+            "Usage: python run.py [rag | eval | audit | harness | snapshot | drift | report] "
             "[optional query for rag]"
         )
         sys.exit(1)
@@ -226,6 +240,8 @@ if __name__ == "__main__":
         sys.exit(cmd_rag(query) or 0)
     if cmd == "eval":
         sys.exit(cmd_eval() or 0)
+    if cmd == "audit":
+        sys.exit(cmd_audit() or 0)
     if cmd == "harness":
         sys.exit(cmd_harness() or 0)
     if cmd == "snapshot":

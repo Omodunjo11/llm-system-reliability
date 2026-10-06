@@ -35,14 +35,31 @@ QUERY_STOPWORDS = {
     "we", "you", "they", "them", "he", "she", "his", "her", "i",
 }
 
+# Imperatives / discourse glue / format instructions that are not topical intent.
+DISCOURSE_STOPWORDS = {
+    "tell", "me", "please", "explain", "describe", "summarize", "summary",
+    "define", "definition", "compare", "contrast", "cite", "list", "show",
+    "give", "provide", "discuss", "ignore", "invent", "called", "about",
+    "regarding", "concerning", "related", "using", "based", "need", "want",
+    "know", "say", "said", "ask", "question", "answer", "help", "stand",
+    "means", "meaning", "one", "two", "three", "four", "five", "sentence",
+    "sentences", "word", "words", "paragraph", "bullet", "bullets", "point",
+    "points", "briefly", "short", "long", "detail", "details", "example",
+    "examples", "exactly", "specifically", "basically",
+}
+
 
 def tokenize(text: str) -> List[str]:
     return TOKEN_RE.findall(text.lower())
 
 
 def query_terms(text: str) -> List[str]:
-    """Tokenize a query and drop stopwords that create false BM25 hits."""
-    return [t for t in tokenize(text) if t not in QUERY_STOPWORDS and len(t) > 1]
+    """Tokenize a query and drop stopwords / discourse verbs that create false hits."""
+    return [
+        t
+        for t in tokenize(text)
+        if t not in QUERY_STOPWORDS and t not in DISCOURSE_STOPWORDS and len(t) > 1
+    ]
 
 
 @dataclass(frozen=True)
@@ -97,6 +114,10 @@ class BM25Index:
         df = self._df.get(term, 0)
         # Standard BM25 IDF with +0.5 smoothing
         return math.log(1.0 + (self._n - df + 0.5) / (df + 0.5))
+
+    def idf(self, term: str) -> float:
+        """Public IDF lookup used by confidence calibration."""
+        return self._idf(term.lower())
 
     def search(
         self,

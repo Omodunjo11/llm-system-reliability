@@ -45,10 +45,11 @@ data/
 ## Key design decisions
 
 - **BM25 over substring match** — graded relevance, not accidental phrase hits
-- **Multi-signal confidence** — top-hit strength, score margin, query-term coverage, evidence density (not `len(docs) * 0.4`)
-- **Abstention gate** — below threshold, refuse rather than guess; faithfulness can also force abstention after generation
+- **Multi-signal confidence** — top-hit strength, score margin, term coverage, **IDF-weighted coverage**, evidence density
+- **Hard abstain gates** — missing rare/OOV query terms force refusal (learned from adversarial breaks)
 - **Extractive grounded answers** — synthesize only from retrieved sentences with source IDs
 - **Faithfulness evaluator** — content-word precision/recall/F1 plus unsupported-token hallucination risk
+- **Adversarial eval suite** — intentional break cases kept as regression tests
 - **Modular architecture** — each stage is independently swappable
 
 ## Quick start
@@ -58,16 +59,22 @@ pip install -r requirements.txt
 
 # Local RAG reliability harness (no API key required)
 python -m src.eval_harness
-# equivalent:
+python -m src.eval_harness --adversarial
+python -m src.eval_harness --all
+
+# equivalent CLI
 python run.py eval
+python run.py audit
 
 # Interactive / one-shot grounded RAG demo
 python run.py rag "What does KYC stand for and what is its purpose in financial services?"
-python run.py rag "What will tomorrow's weather be in Lagos?"
+python run.py rag "Tell me about Basel capital requirements for banks"
 
-# Unit tests
+# Unit + adversarial regression tests
 pytest -q
 ```
+
+See `docs/AUDIT.md` for the break→harden cycle (partial lexical overlap failures and IDF hard gates).
 
 ### Optional live-model gates
 
