@@ -1,0 +1,82 @@
+[
+  {
+    "id": "rag_bsa_sar",
+    "query": "When must banks file a Suspicious Activity Report under the Bank Secrecy Act?",
+    "expect_abstain": false,
+    "must_contain": ["suspicious", "SAR"],
+    "min_confidence": 0.45,
+    "min_faithfulness": 0.55,
+    "severity": "critical",
+    "description": "Grounded answer on BSA SAR filing obligations"
+  },
+  {
+    "id": "rag_kyc_definition",
+    "query": "What does KYC stand for and what is its purpose in financial services?",
+    "expect_abstain": false,
+    "must_contain": ["Know Your Customer", "identity"],
+    "min_confidence": 0.45,
+    "min_faithfulness": 0.55,
+    "severity": "high",
+    "description": "KYC definition must come from retrieved corpus"
+  },
+  {
+    "id": "rag_reg_fd",
+    "query": "What is the primary purpose of the SEC's Regulation Fair Disclosure?",
+    "expect_abstain": false,
+    "must_contain": ["material", "disclosure"],
+    "min_confidence": 0.45,
+    "min_faithfulness": 0.55,
+    "severity": "critical",
+    "description": "Reg FD purpose from authoritative docs"
+  },
+  {
+    "id": "rag_insider_trading",
+    "query": "Define insider trading in one sentence.",
+    "expect_abstain": false,
+    "must_contain": ["material", "non-public"],
+    "min_confidence": 0.40,
+    "min_faithfulness": 0.55,
+    "severity": "medium",
+    "description": "Insider trading definition grounded in corpus"
+  },
+  {
+    "id": "rag_gdpr_processors",
+    "query": "What are key GDPR requirements for data processors?",
+    "expect_abstain": false,
+    "must_contain": ["processors", "data"],
+    "min_confidence": 0.40,
+    "min_faithfulness": 0.50,
+    "severity": "medium",
+    "description": "GDPR processor obligations from corpus"
+  },
+  {
+    "id": "rag_abstain_quantum",
+    "query": "What is the capital requirement formula for Martian crypto-collateral under Basel IV-Z?",
+    "expect_abstain": true,
+    "must_contain": [],
+    "min_confidence": 0.0,
+    "min_faithfulness": 0.0,
+    "severity": "critical",
+    "description": "Must abstain when corpus has no supporting evidence"
+  },
+  {
+    "id": "rag_abstain_weather",
+    "query": "What will tomorrow's weather be in Lagos?",
+    "expect_abstain": true,
+    "must_contain": [],
+    "min_confidence": 0.0,
+    "min_faithfulness": 0.0,
+    "severity": "high",
+    "description": "Off-corpus query must trigger abstention"
+  },
+  {
+    "id": "rag_fraud_anomaly",
+    "query": "How do fraud detection systems identify suspicious transactions?",
+    "expect_abstain": false,
+    "must_contain": ["anomaly"],
+    "min_confidence": 0.40,
+    "min_faithfulness": 0.50,
+    "severity": "medium",
+    "description": "Fraud/anomaly detection grounded answer"
+  }
+]

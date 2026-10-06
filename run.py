@@ -4,26 +4,38 @@ run.py
 CLI entry point for the LLM reliability toolkit.
 
 Usage:
-  python run.py harness          Run golden query regression harness
+  python run.py rag [query]      Run grounded RAG pipeline (demo / interactive)
+  python run.py eval             Run local RAG reliability harness (no API)
+  python run.py harness          Run golden query regression harness (LLM / mock)
   python run.py drift            Run drift check against stored baseline
   python run.py snapshot         Save current responses as new baseline
   python run.py report           Print latest report summaries
 
-Requires ANTHROPIC_API_KEY in environment.
+LLM harness/drift/snapshot use ANTHROPIC_API_KEY when set; otherwise mock mode.
 """
 
+import json
 import os
 import sys
-import json
-from pathlib import Path
 from datetime import datetime, timezone
+from pathlib import Path
 
-from src.eval_harness import run_harness, load_golden_queries, save_report as save_harness_report, print_summary as print_harness_summary
-from src.drift_monitor import run_drift_check, save_report as save_drift_report, print_summary as print_drift_summary
+from src.drift_monitor import (
+    print_summary as print_drift_summary,
+    run_drift_check,
+    save_report as save_drift_report,
+)
+from src.eval_harness import (
+    load_golden_queries,
+    print_summary as print_harness_summary,
+    run_harness,
+    run_rag_harness,
+    save_report as save_harness_report,
+)
+from src.pipeline import ReliabilityPipeline
 
 
 BASELINE_PATH = "data/baseline_responses.json"
-SNAPSHOT_PATH = "outputs/snapshot.json"
 
 
 def get_model_fn():
@@ -34,12 +46,15 @@ def get_model_fn():
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
         print("⚠️  No ANTHROPIC_API_KEY found. Using mock responses for demo.")
+
         def mock_fn(prompt: str) -> str:
             return f"[MOCK RESPONSE] This is a placeholder response for: {prompt[:80]}..."
+
         return mock_fn, "mock-v0"
 
     try:
         import anthropic
+
         client = anthropic.Anthropic(api_key=api_key)
         model = "claude-3-5-sonnet-20241022"
 
@@ -47,7 +62,7 @@ def get_model_fn():
             msg = client.messages.create(
                 model=model,
                 max_tokens=1024,
-                messages=[{"role": "user", "content": prompt}]
+                messages=[{"role": "user", "content": prompt}],
             )
             return msg.content[0].text
 
@@ -58,8 +73,58 @@ def get_model_fn():
         sys.exit(1)
 
 
+def cmd_rag(query: str | None = None):
+    if not query:
+        query = input("Enter your query: ").strip()
+    if not query:
+        print("No query provided.")
+        return 1
+
+    pipeline = ReliabilityPipeline.from_docs()
+    result = pipeline.run(query)
+
+    print("\n=== RETRIEVAL ===")
+    if not result.retrieved:
+        print("  (no documents above score floor)")
+    for doc in result.retrieved:
+        print(f"  [{doc.id}] score={doc.score:.3f} terms={doc.matched_terms}")
+        print(f"    {doc.text[:140]}{'...' if len(doc.text) > 140 else ''}")
+
+    print("\n=== CONFIDENCE ===")
+    c = result.confidence
+    print(f"  score={c.score:.3f}")
+    print(
+        f"  strength={c.retrieval_strength:.3f} margin={c.score_margin:.3f} "
+        f"coverage={c.term_coverage:.3f} density={c.evidence_density:.3f}"
+    )
+    print(f"  reasons={c.reasons}")
+
+    if result.abstained:
+        print("\n=== RESULT ===")
+        print(result.message)
+        if result.faithfulness:
+            print("\n=== FAITHFULNESS (pre-abstain generation) ===")
+            print(json.dumps(result.faithfulness.as_dict(), indent=2))
+        return 0
+
+    print("\n=== ANSWER ===")
+    print(result.message)
+
+    print("\n=== FAITHFULNESS ===")
+    print(json.dumps(result.faithfulness.as_dict(), indent=2))
+    return 0
+
+
+def cmd_eval():
+    print("\n🔍 Running local RAG reliability harness...\n")
+    report = run_rag_harness()
+    save_harness_report(report, output_path="outputs/rag_harness_report.json")
+    print_harness_summary(report)
+    return 0 if report.gate_passed else 1
+
+
 def cmd_harness():
-    print("\n🔍 Running eval harness...\n")
+    print("\n🔍 Running LLM golden-query harness...\n")
     queries = load_golden_queries()
     model_fn, model_version = get_model_fn()
     report = run_harness(queries, model_fn, model_version)
@@ -80,13 +145,18 @@ def cmd_snapshot():
 
     Path(BASELINE_PATH).parent.mkdir(parents=True, exist_ok=True)
     with open(BASELINE_PATH, "w") as f:
-        json.dump({
-            "model_version": model_version,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "responses": snapshot,
-        }, f, indent=2)
+        json.dump(
+            {
+                "model_version": model_version,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "responses": snapshot,
+            },
+            f,
+            indent=2,
+        )
 
     print(f"\n✅ Baseline saved to {BASELINE_PATH} ({len(snapshot)} queries)")
+    return 0
 
 
 def cmd_drift():
@@ -120,7 +190,11 @@ def cmd_drift():
 
 def cmd_report():
     print("\n📋 Latest reports:\n")
-    for report_path in ["outputs/harness_report.json", "outputs/drift_report.json"]:
+    for report_path in [
+        "outputs/rag_harness_report.json",
+        "outputs/harness_report.json",
+        "outputs/drift_report.json",
+    ]:
         if Path(report_path).exists():
             with open(report_path) as f:
                 data = json.load(f)
@@ -134,20 +208,32 @@ def cmd_report():
                 print(f"    Drift:     {status} ({data.get('drift_rate', 0):.1%} drift rate)")
             print()
         else:
-            print(f"  {report_path} — not found (run harness or drift first)\n")
+            print(f"  {report_path} — not found (run eval, harness, or drift first)\n")
+    return 0
 
 
 if __name__ == "__main__":
-    commands = {
-        "harness": cmd_harness,
-        "snapshot": cmd_snapshot,
-        "drift": cmd_drift,
-        "report": cmd_report,
-    }
-
-    if len(sys.argv) < 2 or sys.argv[1] not in commands:
-        print(f"Usage: python run.py [{' | '.join(commands.keys())}]")
+    if len(sys.argv) < 2:
+        print(
+            "Usage: python run.py [rag | eval | harness | snapshot | drift | report] "
+            "[optional query for rag]"
+        )
         sys.exit(1)
 
-    result = commands[sys.argv[1]]()
-    sys.exit(result or 0)
+    cmd = sys.argv[1]
+    if cmd == "rag":
+        query = " ".join(sys.argv[2:]).strip() or None
+        sys.exit(cmd_rag(query) or 0)
+    if cmd == "eval":
+        sys.exit(cmd_eval() or 0)
+    if cmd == "harness":
+        sys.exit(cmd_harness() or 0)
+    if cmd == "snapshot":
+        sys.exit(cmd_snapshot() or 0)
+    if cmd == "drift":
+        sys.exit(cmd_drift() or 0)
+    if cmd == "report":
+        sys.exit(cmd_report() or 0)
+
+    print(f"Unknown command: {cmd}")
+    sys.exit(1)

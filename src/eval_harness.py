@@ -187,3 +187,146 @@ def print_summary(report: HarnessReport) -> None:
     print(f"  Failed:       {report.failed}")
     print(f"  Critical:     {report.critical_failures}")
     print(f"{'='*60}\n")
+
+
+# ─────────────────────────────────────────────────────────────
+# Local RAG reliability harness (no API required)
+# ─────────────────────────────────────────────────────────────
+
+
+@dataclass
+class RagEvalQuery:
+    id: str
+    query: str
+    expect_abstain: bool
+    severity: str
+    description: str
+    must_contain: List[str] = field(default_factory=list)
+    min_confidence: float = 0.0
+    min_faithfulness: float = 0.0
+
+
+def load_rag_eval_queries(path: str = "data/rag_eval_queries.json") -> List[RagEvalQuery]:
+    with open(path) as f:
+        raw = json.load(f)
+    return [RagEvalQuery(**q) for q in raw]
+
+
+def check_rag_query(spec: RagEvalQuery, result) -> QueryResult:
+    """Evaluate one RAG pipeline result against acceptance criteria."""
+    failures: List[str] = []
+    response = result.message
+
+    if spec.expect_abstain and not result.abstained:
+        failures.append("expected_abstention_but_answered")
+    if not spec.expect_abstain and result.abstained:
+        failures.append("unexpected_abstention")
+
+    if not spec.expect_abstain:
+        if result.confidence.score < spec.min_confidence:
+            failures.append(
+                f"confidence_below_floor: {result.confidence.score:.3f} < {spec.min_confidence}"
+            )
+        if result.faithfulness is None:
+            failures.append("missing_faithfulness_score")
+        elif result.faithfulness.score < spec.min_faithfulness:
+            failures.append(
+                f"faithfulness_below_floor: {result.faithfulness.score:.3f} < {spec.min_faithfulness}"
+            )
+        elif result.faithfulness.hallucination_risk == "high":
+            failures.append("hallucination_risk_high")
+
+        for term in spec.must_contain:
+            if term.lower() not in response.lower():
+                failures.append(f"missing_required_content: '{term}'")
+
+    return QueryResult(
+        query_id=spec.id,
+        prompt=spec.query,
+        response=response,
+        passed=len(failures) == 0,
+        failures=failures,
+        latency_ms=0.0,
+        severity=spec.severity,
+        timestamp=datetime.now(timezone.utc).isoformat(),
+    )
+
+
+def run_rag_harness(
+    queries: Optional[List[RagEvalQuery]] = None,
+    docs_path: str = "data/sample_docs.json",
+    model_version: str = "rag-pipeline-v1",
+) -> HarnessReport:
+    """
+    Runs the local grounded RAG pipeline against curated reliability cases.
+
+    This is the default entry point for `python -m src.eval_harness` and does
+    not require an external model API.
+    """
+    from src.pipeline import ReliabilityPipeline
+
+    specs = queries if queries is not None else load_rag_eval_queries()
+    pipeline = ReliabilityPipeline.from_docs(path=docs_path)
+
+    import hashlib
+    run_id = hashlib.sha256(
+        f"{model_version}{datetime.now().isoformat()}".encode()
+    ).hexdigest()[:12]
+
+    results: List[QueryResult] = []
+    for spec in specs:
+        start = time.time()
+        pipeline_result = pipeline.run(spec.query)
+        latency_ms = (time.time() - start) * 1000
+        result = check_rag_query(spec, pipeline_result)
+        result.latency_ms = round(latency_ms, 2)
+        results.append(result)
+
+        status = "✅" if result.passed else "❌"
+        print(f"  {status} [{spec.severity.upper()}] {spec.id} ({latency_ms:.0f}ms)")
+        conf = pipeline_result.confidence.score
+        faith = (
+            pipeline_result.faithfulness.score
+            if pipeline_result.faithfulness is not None
+            else None
+        )
+        print(
+            f"       abstain={pipeline_result.abstained} "
+            f"confidence={conf:.3f} faithfulness={faith}"
+        )
+        if result.failures:
+            for f in result.failures:
+                print(f"       └─ {f}")
+
+    total = len(results)
+    passed = sum(1 for r in results if r.passed)
+    critical_failures = sum(
+        1 for r in results if not r.passed and r.severity == "critical"
+    )
+    pass_rate = passed / max(total, 1)
+    gate_passed = pass_rate >= PASS_RATE_THRESHOLD and critical_failures <= CRITICAL_TOLERANCE
+
+    return HarnessReport(
+        run_id=run_id,
+        model_version=model_version,
+        total=total,
+        passed=passed,
+        failed=total - passed,
+        pass_rate=round(pass_rate, 4),
+        critical_failures=critical_failures,
+        results=results,
+        timestamp=datetime.now(timezone.utc).isoformat(),
+        gate_passed=gate_passed,
+    )
+
+
+def main() -> int:
+    print("\n🔍 Running RAG reliability harness (local, no API)...\n")
+    report = run_rag_harness()
+    save_report(report, output_path="outputs/rag_harness_report.json")
+    print_summary(report)
+    return 0 if report.gate_passed else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

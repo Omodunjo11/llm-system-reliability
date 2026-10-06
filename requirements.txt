@@ -1,0 +1,5 @@
+# Core toolkit is stdlib-only. Optional extras below enable live LLM harness/drift.
+anthropic>=0.40.0
+
+# Dev / test
+pytest>=8.0.0

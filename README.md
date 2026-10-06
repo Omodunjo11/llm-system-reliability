@@ -1,6 +1,6 @@
 # LLM System Reliability
 
-> Hand-rolled RAG pipeline from scratch: grounded retrieval, confidence scoring, and graceful abstention when evidence is insufficient.
+> Hand-rolled RAG pipeline from scratch: BM25 retrieval, multi-signal confidence calibration, grounded generation, and faithfulness-gated abstention when evidence is insufficient.
 
 **Portfolio:** [lapoodunjo.com/projects/llm-reliability](https://lapoodunjo.com/projects/llm-reliability)
 
@@ -10,50 +10,79 @@ Production LLM deployments fail when models answer confidently without sufficien
 
 ## What this is
 
-A Python toolkit implementing the trust layer of a production LLM pipeline with **zero framework dependency** — no LangChain wrappers.
+A Python toolkit implementing the trust layer of a production LLM pipeline with **zero ML framework dependency** — no LangChain wrappers. Core modules are stdlib-only; `anthropic` is optional for live-model harness/drift checks.
 
 ### Core pipeline
 
 ```
 User query
-  → retrieval.py      keyword search over curated corpus
-  → abstention.py     confidence scoring; refuse below threshold
-  → generation.py     synthesize from retrieved docs only
-  → evaluation.py     faithfulness as answer-to-context overlap
+  → retrieval.py      BM25 ranked search over curated corpus
+  → abstention.py     multi-signal confidence; refuse below threshold
+  → generation.py     extractive grounded answer with citations
+  → evaluation.py     faithfulness (precision-biased F1 + unsupported tokens)
+  → pipeline.py       wires stages + post-generation faithfulness gate
 ```
 
 ### Reliability toolkit
 
 ```
 src/
+  pipeline.py              End-to-end grounded RAG + abstention gate
+  retrieval.py             Okapi BM25 retrieval with score floor
+  abstention.py            Multi-signal confidence calibration
+  generation.py            Extractive grounded generation + citations
+  evaluation.py            Faithfulness / hallucination-risk metrics
   drift_monitor.py         Output distribution shifts between model versions
-  eval_harness.py          Regression tests against golden query sets
+  eval_harness.py          RAG + LLM regression harnesses
   failure_classifier.py    Classify LLM failures by type and severity
-  evaluation.py            Faithfulness and overlap metrics
-  abstention.py            Confidence scoring and abstention logic
-  generation.py            Response generation utilities
 
 data/
-  golden_queries.json      Curated prompt battery with acceptance criteria
+  sample_docs.json         Curated compliance / regulatory corpus
+  rag_eval_queries.json    Local RAG reliability cases (incl. abstention)
+  golden_queries.json      Live-model golden prompt battery
 ```
 
 ## Key design decisions
 
-- **Abstention gate** — below confidence threshold, refuse rather than guess
-- **Modular architecture** — retrieval, abstention, generation, and evaluation are independently swappable
-- **Faithfulness evaluator** — lightweight hallucination detection without external eval frameworks
+- **BM25 over substring match** — graded relevance, not accidental phrase hits
+- **Multi-signal confidence** — top-hit strength, score margin, query-term coverage, evidence density (not `len(docs) * 0.4`)
+- **Abstention gate** — below threshold, refuse rather than guess; faithfulness can also force abstention after generation
+- **Extractive grounded answers** — synthesize only from retrieved sentences with source IDs
+- **Faithfulness evaluator** — content-word precision/recall/F1 plus unsupported-token hallucination risk
+- **Modular architecture** — each stage is independently swappable
 
 ## Quick start
 
 ```bash
 pip install -r requirements.txt
+
+# Local RAG reliability harness (no API key required)
 python -m src.eval_harness
+# equivalent:
+python run.py eval
+
+# Interactive / one-shot grounded RAG demo
+python run.py rag "What does KYC stand for and what is its purpose in financial services?"
+python run.py rag "What will tomorrow's weather be in Lagos?"
+
+# Unit tests
+pytest -q
+```
+
+### Optional live-model gates
+
+```bash
+export ANTHROPIC_API_KEY=...   # otherwise mock mode
+python run.py snapshot         # save baseline responses
+python run.py harness          # golden query regression
+python run.py drift            # drift vs baseline
+python run.py report           # latest report summaries
 ```
 
 ## Stack
 
-Python · RAG · Abstention · Evaluation · Drift monitoring
+Python · BM25 RAG · Abstention · Faithfulness evaluation · Drift monitoring
 
 ## Outcome
 
-Complete four-stage RAG pipeline with abstention gate, faithfulness evaluator, and regression harness — built to prove understanding of the trust layer above the model.
+Complete four-stage RAG pipeline with calibrated abstention, faithfulness gating, and a runnable regression harness — built to demonstrate the trust layer above the model, not a framework wrapper.
