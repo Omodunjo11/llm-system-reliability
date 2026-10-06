@@ -1,5 +1,7 @@
 # LLM System Reliability
 
+![Reliability gate](https://github.com/Omodunjo11/llm-system-reliability/actions/workflows/reliability.yml/badge.svg)
+
 > Hand-rolled RAG pipeline from scratch: BM25 retrieval, multi-signal confidence calibration, grounded generation, and faithfulness-gated abstention when evidence is insufficient.
 
 **Portfolio:** [lapoodunjo.com/projects/llm-reliability](https://lapoodunjo.com/projects/llm-reliability)
