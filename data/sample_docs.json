@@ -1,6 +1,72 @@
 [
-    { "id": 1, "text": "Banks must monitor transactions for suspicious activity." },
-    { "id": 2, "text": "Compliance requires accurate reporting of financial transactions." },
-    { "id": 3, "text": "Fraud detection systems rely on anomaly detection." }
-  ]
-  
+  {
+    "id": "doc_bsa_01",
+    "text": "The Bank Secrecy Act (BSA) requires financial institutions to assist U.S. government agencies in detecting and preventing money laundering. Covered institutions must file Currency Transaction Reports for cash transactions above $10,000 and maintain records that enable reconstruction of account activity.",
+    "metadata": {"topic": "bsa", "authority": "FinCEN"}
+  },
+  {
+    "id": "doc_bsa_02",
+    "text": "Under the Bank Secrecy Act, banks must monitor transactions for suspicious activity and file a Suspicious Activity Report (SAR) when they know, suspect, or have reason to suspect that a transaction involves funds derived from illegal activity, is designed to evade BSA requirements, or has no apparent lawful purpose.",
+    "metadata": {"topic": "bsa", "authority": "FinCEN"}
+  },
+  {
+    "id": "doc_kyc_01",
+    "text": "Know Your Customer (KYC) refers to the process of verifying a customer's identity and assessing the risks of illegal intention. In financial services, KYC programs collect identifying information, verify identity with reliable documents or data sources, and understand the nature and purpose of the customer relationship.",
+    "metadata": {"topic": "kyc", "authority": "AML"}
+  },
+  {
+    "id": "doc_kyc_02",
+    "text": "Customer Due Diligence (CDD) rules require banks to identify beneficial owners of legal entity customers, understand the nature and purpose of customer relationships, and conduct ongoing monitoring to identify and report suspicious transactions and maintain and update customer information.",
+    "metadata": {"topic": "kyc", "authority": "FinCEN"}
+  },
+  {
+    "id": "doc_regfd_01",
+    "text": "The SEC's Regulation Fair Disclosure (Reg FD) is designed to prevent selective disclosure of material nonpublic information by public companies. When an issuer discloses material information to securities market professionals or shareholders who may trade on it, the issuer must make public disclosure of that information.",
+    "metadata": {"topic": "reg_fd", "authority": "SEC"}
+  },
+  {
+    "id": "doc_regfd_02",
+    "text": "Under Regulation Fair Disclosure, intentional selective disclosure of material nonpublic information requires simultaneous public disclosure. Unintentional selective disclosure requires prompt public disclosure. Public disclosure may be made by filing a Form 8-K or by another method reasonably designed to provide broad, non-exclusionary distribution.",
+    "metadata": {"topic": "reg_fd", "authority": "SEC"}
+  },
+  {
+    "id": "doc_fraud_01",
+    "text": "Fraud detection systems in banking rely on anomaly detection to flag unusual transaction patterns, device changes, geographic impossibilities, and velocity spikes. Alerts are routed to investigators who determine whether activity warrants a Suspicious Activity Report or account restrictions.",
+    "metadata": {"topic": "fraud", "authority": "internal"}
+  },
+  {
+    "id": "doc_compliance_01",
+    "text": "Compliance programs require accurate reporting of financial transactions, independent testing, designated compliance officers, and ongoing training. Inaccurate or incomplete regulatory reporting can result in enforcement actions, consent orders, and elevated examination scrutiny.",
+    "metadata": {"topic": "compliance", "authority": "internal"}
+  },
+  {
+    "id": "doc_insider_01",
+    "text": "Insider trading generally involves buying or selling a security while in possession of material non-public information in breach of a duty of trust or confidence. Material information is information a reasonable investor would consider important in making an investment decision.",
+    "metadata": {"topic": "insider_trading", "authority": "SEC"}
+  },
+  {
+    "id": "doc_gdpr_01",
+    "text": "Under GDPR, data processors must process personal data only on documented instructions from the controller, implement appropriate security measures, assist with data subject rights requests, delete or return data at the end of services, and make available information needed to demonstrate compliance.",
+    "metadata": {"topic": "gdpr", "authority": "EU"}
+  },
+  {
+    "id": "doc_gdpr_02",
+    "text": "Key GDPR requirements for data processors include confidentiality commitments for persons authorized to process personal data, engagement of sub-processors only with prior authorization, breach notification to the controller without undue delay, and cooperation with supervisory authorities when required.",
+    "metadata": {"topic": "gdpr", "authority": "EU"}
+  },
+  {
+    "id": "doc_dodd_frank_01",
+    "text": "The Dodd-Frank Wall Street Reform and Consumer Protection Act was enacted in 2010 in response to the financial crisis. Its primary agencies of implementation include the Consumer Financial Protection Bureau (CFPB), the SEC, and federal banking regulators overseeing systemic risk, derivatives, and consumer protection.",
+    "metadata": {"topic": "dodd_frank", "authority": "Congress"}
+  },
+  {
+    "id": "doc_principles_01",
+    "text": "Rule-based regulatory approaches prioritize legal certainty and bright-line compliance tests, while principles-based approaches prioritize flexibility and outcomes. The main tradeoffs are between certainty for supervised firms and flexibility for supervisors confronting novel risks.",
+    "metadata": {"topic": "regulatory_theory", "authority": "policy"}
+  },
+  {
+    "id": "doc_aml_01",
+    "text": "Anti-money laundering programs typically include four pillars: internal controls and policies, independent testing, a designated AML compliance officer, and ongoing employee training. Transaction monitoring and customer risk rating operationalize these pillars day to day.",
+    "metadata": {"topic": "aml", "authority": "FinCEN"}
+  }
+]

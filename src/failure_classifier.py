@@ -217,6 +217,31 @@ def classify(prompt: str, response: str) -> List[ClassifiedFailure]:
     return failures
 
 
+def classify_from_faithfulness(
+    prompt: str,
+    response: str,
+    unsupported_tokens: List[str],
+    hallucination_risk: str,
+) -> List[ClassifiedFailure]:
+    """
+    Map faithfulness unsupported-token signals onto the failure taxonomy.
+    """
+    failures = classify(prompt, response)
+    if hallucination_risk == "high" and unsupported_tokens:
+        ft = FAILURE_TAXONOMY["hallucination_factual"]
+        failures.append(ClassifiedFailure(
+            failure_code=ft.code,
+            failure_name=ft.name,
+            severity=ft.severity.value,
+            confidence=0.85,
+            evidence=[f"unsupported_tokens: {', '.join(unsupported_tokens[:8])}"],
+            regulated_impact=ft.regulated_impact,
+            prompt=prompt,
+            response=response,
+        ))
+    return failures
+
+
 def severity_score(failures: List[ClassifiedFailure]) -> Tuple[float, str]:
     """
     Returns a composite severity score (0.0–1.0) and top severity label

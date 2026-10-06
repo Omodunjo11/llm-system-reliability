@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+outputs/
+data/baseline_responses.json
+.pytest_cache/
+.DS_Store
