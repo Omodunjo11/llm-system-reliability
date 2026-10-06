@@ -15,7 +15,7 @@ import math
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Sequence
+from typing import Dict, List, Optional, Sequence
 
 
 TOKEN_RE = re.compile(r"[a-z0-9]+(?:'[a-z]+)?")
